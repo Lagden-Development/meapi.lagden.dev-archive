@@ -1,0 +1,23 @@
+{
+  "spotify": {
+    "name": "Spotify",
+    "description": "Get your Spotify listening data and history.",
+    "setup_required": true,
+    "routes": {
+      "public": [
+        {
+          "name": "Listening",
+          "description": "Get your Spotify listening data and history.",
+          "route": "/api/spotify/listening/<string:uuid>"
+        }
+      ],
+      "private": [
+        {
+          "name": "Listening",
+          "description": "Get your Spotify listening data and history.",
+          "route": "/api/spotify/listening/<string:uuid>?api_key=<string:api_key>"
+        }
+      ]
+    }
+  }
+}

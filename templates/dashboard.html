@@ -1,0 +1,504 @@
+{% extends 'base.html' %} {% block title %}Dashboard - MeAPI{% endblock %} {%
+block content %}
+<main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Stats Tile -->
+    <div class="bg-white shadow rounded-lg p-6">
+      <h2 class="text-lg font-semibold text-gray-700 mb-4">Stats</h2>
+      <div class="space-y-3">
+        <div class="flex justify-between items-center">
+          <span class="text-gray-600">API Requests</span>
+          <span id="apiRequests" class="text-indigo-600 font-bold">
+            <div class="h-4 w-12 bg-gray-300 rounded animate-pulse"></div>
+          </span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-gray-600">Account Age</span>
+          <span id="accountAge" class="text-indigo-600 font-bold">
+            <div class="h-4 w-16 bg-gray-300 rounded animate-pulse"></div>
+          </span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-gray-600">Services Used</span>
+          <span id="servicesUsed" class="text-indigo-600 font-bold">
+            <div class="h-4 w-4 bg-gray-300 rounded animate-pulse"></div>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent API Logs -->
+    <div class="bg-white shadow rounded-lg p-6">
+      <h2 class="text-lg font-semibold text-gray-700 mb-4">Recent API Logs</h2>
+      <ul id="apiLogs" class="space-y-2">
+        {% for i in range(5) %}
+        <li class="flex justify-between items-center">
+          <div class="h-4 w-1/2 bg-gray-300 rounded animate-pulse"></div>
+          <div class="h-4 w-1/4 bg-gray-300 rounded animate-pulse"></div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- Support & Documentation -->
+    <div class="bg-white shadow rounded-lg p-6">
+      <h2 class="text-lg font-semibold text-gray-700 mb-4">
+        Support & Documentation
+      </h2>
+      <div class="space-y-3">
+        <!-- Documentation Button -->
+        <a
+          href="/tbd"
+          target="_blank"
+          class="w-full flex items-center justify-center bg-green-600 text-white px-4 py-2 rounded-md text-center hover:bg-green-700 transition focus:outline-none focus:ring-2 focus:ring-green-500"
+        >
+          <i class="fas fa-book mr-2"></i> Documentation
+        </a>
+        <!-- Discord Support Button -->
+        <a
+          href="https://discord.gg/zXumZ5jsBF"
+          target="_blank"
+          class="w-full flex items-center justify-center bg-[#5865F2] text-white px-4 py-2 rounded-md text-center hover:bg-[#4752C4] transition focus:outline-none focus:ring-2 focus:ring-[#5865F2]"
+        >
+          <i class="fab fa-discord mr-2"></i> Discord Support
+        </a>
+        <!-- Email Support Button -->
+        <a
+          href="mailto:contact@lagden.dev"
+          class="w-full flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-md text-center hover:bg-blue-700 transition focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <i class="fas fa-envelope mr-2"></i> Email Support
+        </a>
+      </div>
+    </div>
+
+    <!-- Usage Graphs -->
+    <div class="bg-white shadow rounded-lg p-6 md:col-span-3">
+      <div class="flex justify-between items-center mb-4">
+        <h2 id="chartTitle" class="text-lg font-semibold text-gray-700">
+          Usage Graphs
+        </h2>
+        <!-- View By Selector -->
+        <div class="flex items-center space-x-2">
+          <span class="text-gray-700">View By:</span>
+          <select
+            id="viewBySelector"
+            class="border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+          >
+            <option value="total">Total Requests</option>
+            <option value="type">Request Type</option>
+            <option value="route">Request Route</option>
+          </select>
+        </div>
+      </div>
+      <!-- Time Range Selector -->
+      <div class="flex space-x-2 mb-4">
+        <button
+          data-range="24h"
+          class="time-range-btn bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          Last 24 Hours
+        </button>
+        <button
+          data-range="7d"
+          class="time-range-btn bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          Last Week
+        </button>
+        <button
+          data-range="1m"
+          class="time-range-btn bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          Last Month
+        </button>
+        <button
+          data-range="1y"
+          class="time-range-btn bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          Last Year
+        </button>
+      </div>
+      <div
+        id="usageChartPlaceholder"
+        class="w-full h-64 bg-gray-300 rounded animate-pulse"
+      ></div>
+      <canvas id="usageChart" class="w-full h-64 hidden"></canvas>
+    </div>
+  </div>
+</main>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    let usageChart; // Chart instance
+    let logsData = []; // Variable to hold logs data
+    let currentRange = "24h"; // Default time range
+    let currentViewBy = "total"; // Default view by option
+
+    // Function to get colors from d3-scale-chromatic
+    function getColorPalette(length) {
+      // Choose a color scheme from d3-scale-chromatic
+      const colorSchemes = [
+        d3.schemeCategory10,
+        d3.schemeSet2,
+        d3.schemeSet3,
+        d3.schemeTableau10,
+      ];
+      // Flatten the array of color schemes
+      const colors = colorSchemes.flat();
+
+      // If more colors are needed, interpolate using d3.interpolateRainbow
+      if (length > colors.length) {
+        const interpolatedColors = [];
+        for (let i = 0; i < length; i++) {
+          interpolatedColors.push(d3.interpolateRainbow(i / length));
+        }
+        return interpolatedColors;
+      } else {
+        return colors.slice(0, length);
+      }
+    }
+
+    // Function to initialize or update the chart with data
+    function initializeChart(data) {
+      // Hide the placeholder and show the chart canvas
+      document.getElementById("usageChartPlaceholder").classList.add("hidden");
+      document.getElementById("usageChart").classList.remove("hidden");
+
+      const ctx = document.getElementById("usageChart").getContext("2d");
+
+      if (usageChart) {
+        usageChart.data.labels = data.labels;
+        usageChart.data.datasets = data.datasets;
+        usageChart.update();
+      } else {
+        usageChart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: data.labels,
+            datasets: data.datasets,
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                display: true,
+                position: "top",
+                labels: {
+                  color: "#4B5563", // Gray-700
+                },
+              },
+              tooltip: {
+                enabled: true,
+                mode: "index",
+                intersect: false,
+              },
+            },
+            interaction: {
+              mode: "nearest",
+              axis: "x",
+              intersect: false,
+            },
+            animation: {
+              duration: 1000,
+              easing: "easeInOutQuad",
+            },
+            scales: {
+              x: {
+                display: true,
+                title: {
+                  display: true,
+                  text: "Time",
+                  color: "#4B5563", // Gray-700
+                  font: {
+                    size: 14,
+                    weight: "bold",
+                  },
+                },
+                ticks: {
+                  color: "#6B7280", // Gray-500
+                },
+              },
+              y: {
+                display: true,
+                title: {
+                  display: true,
+                  text: "Requests",
+                  color: "#4B5563", // Gray-700
+                  font: {
+                    size: 14,
+                    weight: "bold",
+                  },
+                },
+                ticks: {
+                  color: "#6B7280", // Gray-500
+                  beginAtZero: true,
+                },
+              },
+            },
+          },
+        });
+      }
+    }
+
+    // Function to process usage data based on the selected time range and view option
+    function processUsageData(logs, range, viewBy) {
+      let labels = [];
+      let datasets = [];
+      const now = new Date();
+
+      // Define time units and label format based on range
+      let timeUnit, timeDiffFunc, labelFormatFunc;
+      if (range === "24h") {
+        timeUnit = "hour";
+        timeDiffFunc = (a, b) => Math.floor((a - b) / (60 * 60 * 1000));
+        labelFormatFunc = (date) => `${date.getHours()}:00`;
+        for (let i = 23; i >= 0; i--) {
+          const date = new Date(now.getTime() - i * 60 * 60 * 1000);
+          labels.push(labelFormatFunc(date));
+        }
+      } else if (range === "7d") {
+        timeUnit = "day";
+        timeDiffFunc = (a, b) => Math.floor((a - b) / (24 * 60 * 60 * 1000));
+        labelFormatFunc = (date) =>
+          date.toLocaleDateString(undefined, { weekday: "short" });
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+          labels.push(labelFormatFunc(date));
+        }
+      } else if (range === "1m") {
+        timeUnit = "day";
+        timeDiffFunc = (a, b) => Math.floor((a - b) / (24 * 60 * 60 * 1000));
+        labelFormatFunc = (date) => date.getDate();
+        for (let i = 29; i >= 0; i--) {
+          const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+          labels.push(labelFormatFunc(date));
+        }
+      } else if (range === "1y") {
+        timeUnit = "month";
+        timeDiffFunc = (a, b) =>
+          (a.getFullYear() - b.getFullYear()) * 12 +
+          (a.getMonth() - b.getMonth());
+        labelFormatFunc = (date) =>
+          date.toLocaleDateString(undefined, { month: "short" });
+        for (let i = 11; i >= 0; i--) {
+          const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          labels.push(labelFormatFunc(date));
+        }
+      }
+
+      if (viewBy === "total") {
+        // Single dataset for total requests
+        const values = new Array(labels.length).fill(0);
+
+        logs.forEach((log) => {
+          const logDate = new Date(log.createdAt);
+          const diff = timeDiffFunc(now, logDate);
+
+          if (diff >= 0 && diff < labels.length) {
+            const index = labels.length - 1 - diff;
+            values[index]++;
+          }
+        });
+
+        datasets.push({
+          label: "API Requests",
+          data: values,
+          backgroundColor: "rgba(99, 102, 241, 0.2)", // Indigo-500 with opacity
+          borderColor: "rgba(99, 102, 241, 1)", // Indigo-500
+          borderWidth: 2,
+          pointBackgroundColor: "rgba(99, 102, 241,1)",
+          pointBorderColor: "#fff",
+          pointHoverBackgroundColor: "#fff",
+          pointHoverBorderColor: "rgba(99, 102, 241,1)",
+          fill: true,
+          tension: 0.4, // Smooth curves
+        });
+      } else if (viewBy === "type") {
+        // Multiple datasets for each request type
+        const requestTypes = Array.from(new Set(logs.map((log) => log.method)));
+        const dataMap = {};
+
+        requestTypes.forEach((type) => {
+          dataMap[type] = new Array(labels.length).fill(0);
+        });
+
+        logs.forEach((log) => {
+          const logDate = new Date(log.createdAt);
+          const diff = timeDiffFunc(now, logDate);
+
+          if (diff >= 0 && diff < labels.length) {
+            const index = labels.length - 1 - diff;
+            dataMap[log.method][index]++;
+          }
+        });
+
+        // Get colors from d3-scale-chromatic
+        const colors = getColorPalette(requestTypes.length);
+
+        datasets = requestTypes.map((type, idx) => {
+          const color = colors[idx];
+          return {
+            label: type,
+            data: dataMap[type],
+            backgroundColor: d3.color(color).copy({ opacity: 0.2 }).formatRgb(),
+            borderColor: color,
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+          };
+        });
+      } else if (viewBy === "route") {
+        // Multiple datasets for each request route
+        const requestRoutes = Array.from(new Set(logs.map((log) => log.route)));
+        const dataMap = {};
+
+        requestRoutes.forEach((route) => {
+          dataMap[route] = new Array(labels.length).fill(0);
+        });
+
+        logs.forEach((log) => {
+          const logDate = new Date(log.createdAt);
+          const diff = timeDiffFunc(now, logDate);
+
+          if (diff >= 0 && diff < labels.length) {
+            const index = labels.length - 1 - diff;
+            dataMap[log.route][index]++;
+          }
+        });
+
+        // Get colors from d3-scale-chromatic
+        const colors = getColorPalette(requestRoutes.length);
+
+        datasets = requestRoutes.map((route, idx) => {
+          const color = colors[idx];
+          return {
+            label: route,
+            data: dataMap[route],
+            backgroundColor: d3.color(color).copy({ opacity: 0.2 }).formatRgb(),
+            borderColor: color,
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+          };
+        });
+      }
+
+      return { labels, datasets };
+    }
+
+    // Function to update the chart based on selected time range and view option
+    function updateChart() {
+      // Update the chart title
+      const chartTitle = document.getElementById("chartTitle");
+      let rangeText = "";
+      if (currentRange === "24h") {
+        rangeText = "Last 24 Hours";
+      } else if (currentRange === "7d") {
+        rangeText = "Last Week";
+      } else if (currentRange === "1m") {
+        rangeText = "Last Month";
+      } else if (currentRange === "1y") {
+        rangeText = "Last Year";
+      }
+
+      let viewByText = "";
+      if (currentViewBy === "total") {
+        viewByText = "";
+      } else if (currentViewBy === "type") {
+        viewByText = " by Request Type";
+      } else if (currentViewBy === "route") {
+        viewByText = " by Request Route";
+      }
+
+      chartTitle.textContent = `Usage Graphs (${rangeText}${viewByText})`;
+
+      // Process the data
+      const usageData = processUsageData(logsData, currentRange, currentViewBy);
+
+      // Initialize or update the chart
+      initializeChart(usageData);
+    }
+
+    // Fetch data
+    $.ajax({
+      url: "https://meapi.lagden.dev/api/account",
+      type: "GET",
+      success: function (data) {
+        if (data.ok) {
+          // Update Stats
+          document.getElementById("apiRequests").textContent =
+            data.stats.api_requests;
+          document.getElementById("accountAge").textContent =
+            data.readables.account_age;
+
+          // Calculate Services Used
+          const servicesSet = new Set();
+          data.user.logs.api.forEach((log) => {
+            const service = log.route.split(".")[0];
+            servicesSet.add(service);
+          });
+          document.getElementById("servicesUsed").textContent =
+            servicesSet.size;
+
+          // Update Recent API Logs
+          const apiLogsElement = document.getElementById("apiLogs");
+          apiLogsElement.innerHTML = ""; // Clear placeholder items
+          data.user.logs.api.slice(0, 5).forEach((log) => {
+            const li = document.createElement("li");
+            li.classList.add("flex", "justify-between", "items-center");
+            li.innerHTML = `<span class="text-gray-700">${
+              log.route
+            }</span><span class="text-gray-500 text-sm">${new Date(
+              log.createdAt
+            ).toLocaleString()}</span>`;
+            apiLogsElement.appendChild(li);
+          });
+
+          // Store logs data
+          logsData = data.user.logs.api;
+
+          // Initialize chart with default settings
+          updateChart();
+        } else {
+          if (data.error) {
+            toastr.error(data.error);
+          } else {
+            toastr.error(
+              "An error occurred, please reload or contact support."
+            );
+          }
+        }
+      },
+      error: function () {
+        toastr.error("An error occurred, please reload or contact support.");
+      },
+    });
+
+    // Add event listeners to time range buttons
+    const timeRangeButtons = document.querySelectorAll(".time-range-btn");
+    timeRangeButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        // Remove active class from all buttons
+        timeRangeButtons.forEach((btn) => {
+          btn.classList.remove("bg-indigo-600", "text-white");
+          btn.classList.add("bg-gray-200", "text-gray-700");
+        });
+        // Add active class to clicked button
+        button.classList.add("bg-indigo-600", "text-white");
+        button.classList.remove("bg-gray-200", "text-gray-700");
+
+        currentRange = button.getAttribute("data-range");
+        updateChart();
+      });
+    });
+
+    // Add event listener to "View By" selector
+    const viewBySelector = document.getElementById("viewBySelector");
+    viewBySelector.addEventListener("change", () => {
+      currentViewBy = viewBySelector.value;
+      updateChart();
+    });
+  });
+</script>
+
+{% endblock %}

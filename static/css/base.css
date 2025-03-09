@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background: linear-gradient(
+    -45deg,
+    #ee7752,
+    #e73c7e,
+    #23a6d5,
+    #23d5ab,
+    #ffcc00,
+    #ff6600,
+    #ff0066,
+    #6600ff,
+    #00ccff,
+    #00ffcc,
+    #ccff00,
+    #ff00cc,
+    #ff9999,
+    #ffcc99,
+    #ffff99,
+    #ccff99,
+    #99ff99,
+    #99ffcc,
+    #99ffff,
+    #99ccff,
+    #9999ff,
+    #cc99ff,
+    #ff99ff,
+    #ff99cc,
+    #ff6666,
+    #ff9966,
+    #ffcc66,
+    #ffff66,
+    #ccff66,
+    #99ff66,
+    #66ff66,
+    #66ff99,
+    #66ffcc,
+    #66ffff,
+    #66ccff,
+    #6699ff,
+    #6666ff,
+    #9966ff,
+    #cc66ff,
+    #ff66ff,
+    #ff66cc,
+    #ff6699,
+    #ff3333,
+    #ff6633,
+    #ff9933,
+    #ffcc33,
+    #ffff33,
+    #ccff33,
+    #99ff33,
+    #66ff33,
+    #33ff33,
+    #33ff66,
+    #33ff99,
+    #33ffcc,
+    #33ffff,
+    #33ccff,
+    #3399ff,
+    #3366ff,
+    #3333ff,
+    #6633ff,
+    #9933ff,
+    #cc33ff,
+    #ff33ff,
+    #ff33cc,
+    #ff3399,
+    #ff3366
+  );
+  background-size: 800% 800%;
+  animation: gradient 150s ease infinite;
+  height: 100vh;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
